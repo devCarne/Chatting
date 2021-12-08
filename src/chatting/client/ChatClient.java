@@ -87,6 +87,7 @@ class ChatClient extends JFrame implements ActionListener, Runnable {
 			socket = new Socket(serverIP, 9500);
 			// 에러 발생
 			reader = new ObjectInputStream(socket.getInputStream());
+
 			writer = new ObjectOutputStream(socket.getOutputStream());
 			System.out.println("전송 준비 완료!");
 
