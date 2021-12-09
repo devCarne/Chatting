@@ -3,15 +3,19 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MyChattingWorker extends Thread{
 
     ObjectInputStream inputStream;
     ObjectOutputStream outputStream;
     Socket socket;
+    List<MyChattingWorker> chattingWorkers;
 
-    MyChattingWorker(Socket socket) {
+    MyChattingWorker(Socket socket, List<MyChattingWorker> chattingWorkers) {
         this.socket = socket;
+        this.chattingWorkers = chattingWorkers;
 
         try {
             inputStream = new ObjectInputStream(socket.getInputStream());
@@ -24,10 +28,10 @@ public class MyChattingWorker extends Thread{
     public void run() {
         try {
             while (true) {
-                MyChattingMessage chattingMessage = (MyChattingMessage) inputStream.readObject();
-                String nickname = chattingMessage.getNickname();
+                MyChattingMessage inputMessage = (MyChattingMessage) inputStream.readObject();
+                String nickname = inputMessage.getNickname();
 
-                if (chattingMessage.getAction() == MyChattingAction.EXIT) {
+                if (inputMessage.getAction() == MyChattingAction.EXIT) {
                     MyChattingMessage serverMessage = new MyChattingMessage();
                     serverMessage.setAction(MyChattingAction.EXIT);
                     serverMessage.setNickname(nickname);
@@ -37,20 +41,19 @@ public class MyChattingWorker extends Thread{
                     inputStream.close();
                     outputStream.close();
                     socket.close();
-                    System.out.println(chattingMessage.getNickname() + "님이 접속을 종료했습니다.");
+                    System.out.println(inputMessage.getNickname() + "님이 접속을 종료했습니다.");
                     break;
-                } else if (chattingMessage.getAction() == MyChattingAction.JOIN) {
-                    MyChattingMessage serverMessage = new MyChattingMessage();
-                    serverMessage.setAction(MyChattingAction.SEND);
-                    serverMessage.setMessage(nickname + "님이 입장하셨습니다.");
-                    outputStream.writeObject(serverMessage);
-                    outputStream.flush();
-                } else if (chattingMessage.getAction() == MyChattingAction.SEND) {
-                    MyChattingMessage serverMessage = new MyChattingMessage();
-                    serverMessage.setAction(MyChattingAction.SEND);
-                    serverMessage.setMessage(nickname + " : " + chattingMessage.getMessage());
-                    outputStream.writeObject(serverMessage);
-                    outputStream.flush();
+                } else if (inputMessage.getAction() == MyChattingAction.JOIN) {
+                    MyChattingMessage outputMessage = new MyChattingMessage();
+                    outputMessage.setAction(MyChattingAction.SEND);
+                    outputMessage.setMessage(nickname + "님이 입장하셨습니다.");
+                    broadcast(outputMessage);
+
+                } else if (inputMessage.getAction() == MyChattingAction.SEND) {
+                    MyChattingMessage outputMessage = new MyChattingMessage();
+                    outputMessage.setAction(MyChattingAction.SEND);
+                    outputMessage.setMessage(nickname + " : " + inputMessage.getMessage());
+                    broadcast(outputMessage);
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -59,6 +62,9 @@ public class MyChattingWorker extends Thread{
     }
 
     public void broadcast(MyChattingMessage chattingMessage) throws IOException {
-        System.out.println(chattingMessage.getNickname() + " : " + chattingMessage.getMessage());
+        for(MyChattingWorker worker : chattingWorkers) {
+            worker.outputStream.writeObject(chattingMessage);
+            worker.outputStream.flush();
+        }
     }
 }

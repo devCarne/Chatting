@@ -24,11 +24,11 @@ public class MyChattingClient implements Runnable {
             outputStream = new ObjectOutputStream(socket.getOutputStream());
             inputStream = new ObjectInputStream(socket.getInputStream());
 
-            MyChattingMessage chattingMessage = new MyChattingMessage();
-            chattingMessage.setNickname(nickname);
-            chattingMessage.setAction(MyChattingAction.JOIN);
+            MyChattingMessage joinMessage = new MyChattingMessage();
+            joinMessage.setNickname(nickname);
+            joinMessage.setAction(MyChattingAction.JOIN);
 
-            outputStream.writeObject(chattingMessage);
+            outputStream.writeObject(joinMessage);
             outputStream.flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -42,15 +42,15 @@ public class MyChattingClient implements Runnable {
     public void run() {
         while (true) {
             try {
-                MyChattingMessage chattingMessage = (MyChattingMessage) inputStream.readObject();
+                MyChattingMessage inputMessage = (MyChattingMessage) inputStream.readObject();
 
-                if (chattingMessage.getAction() == MyChattingAction.EXIT) {
+                if (inputMessage.getAction() == MyChattingAction.EXIT) {
                     inputStream.close();
                     outputStream.close();
                     socket.close();
                     System.exit(0);
-                } else if (chattingMessage.getAction() == MyChattingAction.SEND) {
-                    System.out.println(chattingMessage.getMessage());
+                } else if (inputMessage.getAction() == MyChattingAction.SEND) {
+                    System.out.println(inputMessage.getMessage());
 //                    System.out.println("메시지를 입력하세요");
 //                    String message = scanner.nextLine();
 //                    if (message.equals("EXIT")) {
@@ -63,6 +63,14 @@ public class MyChattingClient implements Runnable {
 //                    outputStream.writeObject(chattingMessage);
 //                    outputStream.flush();
                 }
+                System.out.println("메시지를 입력하세요.");
+                MyChattingMessage outputMessage = new MyChattingMessage();
+                outputMessage.setAction(MyChattingAction.SEND);
+                outputMessage.setMessage(scanner.nextLine());
+
+                outputStream.writeObject(outputMessage);
+                outputStream.flush();
+
             } catch (IOException | ClassNotFoundException ioException) {
                 ioException.printStackTrace();
             }
